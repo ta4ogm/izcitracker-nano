@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>İzci hymTR Tracker – Ayar Aracı</title>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --ink:#1d232b; --muted:#5b6673; --line:#dde2e8; --acc:#1f5f9f; --ok:#1f6f43; --warn:#9a5b00; --err:#b3261e; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#111418; --card:#1a1f25; --ink:#e7ebef; --muted:#9aa5b1; --line:#2c333b; --acc:#6fa8e8; --ok:#5cc58a; --warn:#e3a34a; --err:#ff8a80; } }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width:780px; margin:0 auto; padding:24px 16px 48px; }
+  h1 { font-size:24px; margin:0 0 4px; }
+  .sub { color:var(--muted); margin:0 0 20px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px; margin-bottom:16px; }
+  .card h2 { font-size:16px; margin:0 0 12px; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px 16px; }
+  .full { grid-column:1 / -1; }
+  @media (max-width:560px) { .grid { grid-template-columns:1fr; } }
+  label { display:block; font-weight:600; font-size:13px; margin-bottom:4px; }
+  input, select { width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:8px; background:transparent; color:var(--ink); font:inherit; }
+  input:disabled, select:disabled { opacity:.5; }
+  .hint { color:var(--muted); font-size:12.5px; margin-top:3px; }
+  .row { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+  button { background:var(--acc); color:#fff; border:0; border-radius:8px; padding:10px 16px; font:600 14.5px system-ui, sans-serif; cursor:pointer; }
+  button.sec { background:transparent; color:var(--acc); border:1px solid var(--acc); }
+  button:disabled { opacity:.4; cursor:not-allowed; }
+  .status { font-size:14px; padding:8px 12px; border-radius:8px; background:var(--bg); border:1px solid var(--line); }
+  .status.ok { color:var(--ok); } .status.err { color:var(--err); } .status.warn { color:var(--warn); }
+  .preview, pre { font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:13px; background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:10px 12px; word-break:break-all; white-space:pre-wrap; }
+  pre { max-height:220px; overflow:auto; margin:0; }
+  table { width:100%; border-collapse:collapse; font-size:13.5px; }
+  th, td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); }
+  details summary { cursor:pointer; color:var(--muted); font-size:13.5px; }
+  ol { padding-left:20px; margin:0; } li { margin:4px 0; }
+  code { font-family:ui-monospace, Menlo, Consolas, monospace; font-size:13px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>İzci hymTR Tracker – Ayar Aracı</h1>
+  <p class="sub">Tracker'ı USB ile bilgisayara takın, bağlanın, ayarları okuyun, değiştirin ve yazın. Yeniden yazılım yüklemeye gerek yok; ayarlar doğrudan Nano'nun hafızasına (EEPROM) yazılır.</p>
+
+  <div class="card" id="nosupport" hidden>
+    <h2>Tarayıcınız desteklemiyor</h2>
+    <p style="margin:0">Bu araç USB seri bağlantı (Web Serial) kullanır. Bilgisayarda <b>Google Chrome</b> ya da <b>Microsoft Edge</b> ile açın. Firefox, Safari ve telefonlar desteklemez.</p>
+  </div>
+
+  <div class="card">
+    <h2>1. Bağlantı</h2>
+    <div class="row">
+      <button id="btnConnect">Tracker'a bağlan</button>
+      <button id="btnRead" class="sec" disabled>Ayarları yeniden oku</button>
+      <button id="btnDisconnect" class="sec" disabled>Bağlantıyı kes</button>
+    </div>
+    <p class="hint">Bağlanmadan önce Arduino IDE'nin Serial Monitor'ünü ve orijinal ayar programını kapatın. Listeden tracker'ın COM portunu seçin (genelde "USB-SERIAL CH340").</p>
+    <div class="status" id="status">Bağlı değil.</div>
+  </div>
+
+  <div class="card">
+    <h2>2. Ayarlar</h2>
+    <div class="grid">
+      <div><label for="call">Çağrı işareti</label><input id="call" maxlength="6" placeholder="Örn: TA1ABC" autocomplete="off" disabled></div>
+      <div><label for="ssid">SSID</label><select id="ssid" disabled></select><div class="hint">Araç için 9, el telsizi için 7 yaygındır.</div></div>
+      <div><label for="sym">Harita simgesi</label>
+        <select id="sym" disabled>
+          <option value=">">Araba</option>
+          <option value="j">Jip</option>
+          <option value="k">Kamyonet</option>
+          <option value="u">Kamyon</option>
+          <option value="v">Minibüs / van</option>
+          <option value="b">Bisiklet</option>
+          <option value="&lt;">Motosiklet</option>
+          <option value="[">Yürüyen kişi</option>
+          <option value="Y">Yat / tekne</option>
+          <option value="-">Ev</option>
+        </select></div>
+      <div><label for="msg">Açıklama</label><input id="msg" maxlength="29" autocomplete="off" disabled><div class="hint">En fazla 29 karakter (paketin başına yükseklik bilgisi ekleniyor). Türkçe karakterler çevrilir.</div></div>
+      <div class="full"><label for="beacon">Beacon sıklığı (çarpan)</label><input id="beacon" type="number" min="1" max="30" disabled>
+        <div class="hint" id="beaconHint"></div></div>
+    </div>
+    <details style="margin-top:12px">
+      <summary>Gelişmiş: yol (path)</summary>
+      <div class="grid" style="margin-top:10px">
+        <div><label for="path">Yol</label>
+          <select id="path" disabled>
+            <option value="WIDE1-1,WIDE2-1">WIDE1-1,WIDE2-1</option>
+            <option value="WIDE1-1,WIDE2-2">WIDE1-1,WIDE2-2</option>
+            <option value="WIDE2-1,WIDE2-1">WIDE2-1</option>
+          </select></div>
+        <div class="hint" style="align-self:end">Not: Orijinal hymTR yazılımı (01012020a) bu ayarı kaydeder ama paketleri her zaman <b>WIDE1-1,WIDE2-2</b> yoluyla gönderir.</div>
+      </div>
+    </details>
+    <div class="preview" id="preview" style="margin-top:12px">–</div>
+    <div class="row" style="margin-top:14px">
+      <button id="btnWrite" disabled>Ayarları tracker'a yaz</button>
+      <button id="btnDefaults" class="sec" disabled>Fabrika ayarlarına dön</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Seri port kaydı</h2>
+    <pre id="log"></pre>
+  </div>
+
+  <div class="card">
+    <h2>Nasıl çalışır?</h2>
+    <ol>
+      <li>Tracker açılırken (USB'ye takınca) birkaç saniye bekleyin.</li>
+      <li><b>Tracker'a bağlan</b> → portu seçin. Araç tracker'ı ayar moduna alır ve mevcut ayarları okur.</li>
+      <li>Ayarları değiştirip <b>Ayarları tracker'a yaz</b>'a basın. Yazma bitince araç ayarları tekrar okuyup doğrular.</li>
+      <li><b>Bağlantıyı kes</b>'e basın; tracker ayar modundan çıkıp normal çalışmaya döner.</li>
+    </ol>
+    <p class="hint">Ayar modundayken tracker beacon göndermez. İşiniz bitince mutlaka "Bağlantıyı kes"e basın ya da tracker'ın gücünü kapatıp açın.</p>
+  </div>
+
+  <p class="hint">İzci hymTR tracker, Barış Dinç (TA7W) tarafından geliştirilmiştir (github.com/barisdinc/hymTR). Bu araç, aynı seri ayar protokolünü kullanan bağımsız bir tarayıcı uygulamasıdır. Çağrı işaretiyle yayın yapmak için amatör telsiz lisansı gerekir.</p>
+</main>
+
+<script>
+/* ===== hymTR seri protokol istemcisi =====
+ * Protokol (hymTR.cpp, VERSIYON 01012020a, 115200 baud):
+ *   '!'  -> ayar moduna gir, cihaz "#" yazar
+ *   'R'  -> {'V':'...','CagriIsareti':'...',...} biçiminde ayarları yazar, sonra "#"
+ *   'W'  -> ayarları yazdırır, sonra 0x01 + TAB ile ayrılmış alanları bekler, EEPROM'a yazar
+ *   'D'  -> fabrika ayarları, 'Q' -> ayar modundan çık
+ */
+const HymProto = (() => {
+  const enc = new TextEncoder(), dec = new TextDecoder('latin1');
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+  function parseConfig(text) {
+    const s = text.lastIndexOf('{'), e = text.indexOf('}', s);
+    if (s < 0 || e < 0) return null;
+    const body = text.slice(s + 1, e), out = {};
+    const re = /'(\w+)':(?:'([^']*)'|([^,}]*))/g; let m;
+    while ((m = re.exec(body))) out[m[1]] = m[2] !== undefined ? m[2] : m[3];
+    return out.V ? out : null;
+  }
+  const ssidChar = n => String.fromCharCode(0x30 + n);       // 0..15 -> '0'..'?'
+  const ssidNum = c => (c && c.length) ? (c.charCodeAt(0) & 0x0F) : 0;
+
+  class Client {
+    constructor(transport, log) { this.t = transport; this.buf = ''; this.log = log || (() => {}); transport.onData = b => { const s = dec.decode(b); this.buf += s; this.log(s, 'rx'); }; }
+    mark() { return this.buf.length; }
+    async waitFor(re, from, ms) {
+      const end = Date.now() + ms;
+      while (Date.now() < end) { const seg = this.buf.slice(from); const m = seg.match(re); if (m) return seg; await sleep(20); }
+      throw new Error('Zaman aşımı: ' + re);
+    }
+    async send(str) { this.log(str.replace(/\x01/g, '<01>').replace(/\t/g, '<TAB>'), 'tx'); await this.t.write(enc.encode(str)); }
+    async enterConfig() {
+      for (let i = 0; i < 6; i++) {
+        const m = this.mark(); await this.send('!');
+        try { await this.waitFor(/#/, m, 1500); return; } catch (e) { /* cihaz meşgul olabilir, tekrar dene */ }
+      }
+      throw new Error('Tracker ayar moduna girmedi.');
+    }
+    async read() {
+      const m = this.mark(); await this.send('R');
+      const seg = await this.waitFor(/\}[\s\S]*#/, m, 4000);
+      const cfg = parseConfig(seg); if (!cfg) throw new Error('Ayarlar okunamadı.');
+      return cfg;
+    }
+    async write(cur, nw) {
+      let m = this.mark(); await this.send('W');
+      await this.waitFor(/Kontrol \(CRC\)[^\n]*\n/, m, 5000);
+      const f = [cur.V, nw.call, ssidChar(nw.ssid), cur.Destination || 'APiZCi', cur.DestinationSSID || '0',
+        nw.path1, ssidChar(nw.path1ssid), nw.path2, ssidChar(nw.path2ssid), nw.sym, cur.SembolTabi || '/',
+        String(cur.BeaconTipi ?? 3), String(nw.beacon), String(cur.GPSHizi || 9600), nw.msg, String(cur.GPSvar_yok ?? 1),
+        cur.latitude || '', cur.longitude || '', cur.altitude || ''];
+      m = this.mark();
+      await this.send('\x01'); await sleep(30);
+      for (const x of f) { await this.send(x + '\t'); await sleep(25); }
+      const seg = await this.waitFor(/Eeproma yazildi|E99/, m, 8000);
+      if (/E99/.test(seg)) throw new Error('Yazılım sürümü uyumsuz (E99).');
+      await this.waitFor(/#/, m, 3000);
+    }
+    async defaults() { const m = this.mark(); await this.send('D'); await this.waitFor(/Eeproma yazildi[\s\S]*#/, m, 5000); }
+    async quit() { const m = this.mark(); await this.send('Q'); try { await this.waitFor(/cikiliyor/, m, 2000); } catch (e) {} }
+  }
+  return { Client, parseConfig, ssidChar, ssidNum };
+})();
+</script>
+
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  for (let i = 0; i <= 15; i++) { const o = document.createElement('option'); o.value = i; o.textContent = i === 0 ? '0 (yok)' : i; $('ssid').appendChild(o); }
+  if (!('serial' in navigator)) { $('nosupport').hidden = false; $('btnConnect').disabled = true; }
+
+  const logEl = $('log');
+  function log(s, dir) { logEl.textContent += (dir === 'tx' ? '\n→ ' + s + '\n' : s); if (logEl.textContent.length > 20000) logEl.textContent = logEl.textContent.slice(-15000); logEl.scrollTop = logEl.scrollHeight; }
+  function status(t, cls) { $('status').textContent = t; $('status').className = 'status ' + (cls || ''); }
+
+  const tr = { 'ç':'c','Ç':'C','ğ':'g','Ğ':'G','ı':'i','İ':'I','ö':'o','Ö':'O','ş':'s','Ş':'S','ü':'u','Ü':'U' };
+  const ascii = s => s.replace(/[çÇğĞıİöÖşŞüÜ]/g, c => tr[c]).replace(/[^\x20-\x7E]/g, '').replace(/['\t]/g, '');
+  const fields = ['call', 'ssid', 'sym', 'msg', 'beacon', 'path'];
+  const setEnabled = on => { fields.forEach(f => $(f).disabled = !on); $('btnWrite').disabled = !on; $('btnDefaults').disabled = !on; $('btnRead').disabled = !on; $('btnDisconnect').disabled = !on; };
+
+  let port = null, reader = null, client = null, current = null, busy = false;
+
+  function fill(cfg) {
+    current = cfg;
+    $('call').value = (cfg.CagriIsareti || '').trim();
+    $('ssid').value = HymProto.ssidNum(cfg.CagriIsaretiSSID);
+    const sym = cfg.Sembol || '>'; if (![...$('sym').options].some(o => o.value === sym)) { const o = document.createElement('option'); o.value = sym; o.textContent = 'Mevcut: ' + sym; $('sym').appendChild(o); }
+    $('sym').value = sym;
+    $('msg').value = cfg.Mesaj || '';
+    $('beacon').value = parseInt(cfg.BeaconSuresi, 10) || 1;
+    const p = (cfg.Path1 || 'WIDE1').trim() + '-' + HymProto.ssidNum(cfg.Path1SSID) + ',' + (cfg.Path2 || 'WIDE2').trim() + '-' + HymProto.ssidNum(cfg.Path2SSID);
+    if ([...$('path').options].some(o => o.value === p)) $('path').value = p;
+    update();
+  }
+
+  function gather() {
+    const [p1, p2] = $('path').value.split(',');
+    const [p1c, p1s] = p1.split('-'), [p2c, p2s] = p2.split('-');
+    return { call: $('call').value.trim().toUpperCase(), ssid: +$('ssid').value, sym: $('sym').value, msg: ascii($('msg').value).slice(0, 29),
+      beacon: Math.round(+$('beacon').value), path1: p1c, path1ssid: +p1s, path2: p2c, path2ssid: +p2s };
+  }
+
+  function update() {
+    const n = gather(), errs = [];
+    if (!/^[A-Z0-9]{3,6}$/.test(n.call)) errs.push('Çağrı işareti 3–6 harf/rakam olmalı.');
+    if (!(n.beacon >= 1 && n.beacon <= 30)) errs.push('Beacon çarpanı 1–30 olmalı.');
+    const b = n.beacon >= 1 ? n.beacon : 1;
+    $('beaconHint').textContent = `Hıza göre beacon aralığı: durağan/≤10 km/s ${b * 100} sn · 10–50 km/s ${b * 60} sn · 50–100 km/s ${b * 40} sn · 100+ km/s ${b * 20} sn. Önerilen: 1–3.`;
+    $('preview').textContent = errs.length ? errs.join(' ') : `${n.call}${n.ssid ? '-' + n.ssid : ''}  simge "${n.sym}"  açıklama "/A=yükseklik ${n.msg}"`;
+    $('btnWrite').disabled = !client || errs.length > 0 || busy;
+    return errs.length === 0;
+  }
+  fields.forEach(f => $(f).addEventListener('input', update));
+
+  async function run(label, fn) {
+    if (busy) return; busy = true; setEnabled(false); status(label + '…');
+    try { await fn(); } catch (e) { status(e.message, 'err'); }
+    finally { busy = false; if (client) setEnabled(true); update(); }
+  }
+
+  async function readLoop() {
+    try { while (port && port.readable) { reader = port.readable.getReader(); while (true) { const { value, done } = await reader.read(); if (done) break; if (value && transport.onData) transport.onData(value); } reader.releaseLock(); } }
+    catch (e) { /* port kapandı */ }
+  }
+  const transport = { onData: null, write: async (bytes) => { const w = port.writable.getWriter(); await w.write(bytes); w.releaseLock(); } };
+
+  $('btnConnect').addEventListener('click', async () => {
+    try { port = await navigator.serial.requestPort(); await port.open({ baudRate: 115200 }); }
+    catch (e) { status('Port açılamadı: ' + e.message, 'err'); port = null; return; }
+    client = new HymProto.Client(transport, log); readLoop();
+    await run('Tracker yeniden başlıyor, bekleniyor', async () => {
+      await new Promise(r => setTimeout(r, 2500));
+      status('Ayar moduna giriliyor…'); await client.enterConfig();
+      status('Ayarlar okunuyor…'); const cfg = await client.read(); fill(cfg);
+      status(`Bağlandı. Yazılım sürümü: ${cfg.V}. Ayarlar okundu.`, 'ok');
+    });
+  });
+  $('btnRead').addEventListener('click', () => run('Okunuyor', async () => { fill(await client.read()); status('Ayarlar okundu.', 'ok'); }));
+  $('btnWrite').addEventListener('click', () => { if (!update()) return; run('Yazılıyor', async () => {
+    const n = gather(); await client.write(current, n); const cfg = await client.read(); fill(cfg);
+    const ok = (cfg.CagriIsareti || '').trim() === n.call && HymProto.ssidNum(cfg.CagriIsaretiSSID) === n.ssid && (cfg.Mesaj || '') === n.msg && cfg.Sembol === n.sym && parseInt(cfg.BeaconSuresi, 10) === n.beacon;
+    status(ok ? 'Ayarlar yazıldı ve doğrulandı. İşiniz bittiyse "Bağlantıyı kes"e basın.' : 'Yazıldı ama geri okunan değerler farklı. Kaydı kontrol edin.', ok ? 'ok' : 'warn');
+  }); });
+  $('btnDefaults').addEventListener('click', () => { if (!confirm('Tracker fabrika ayarlarına (iZCi01-9) dönsün mü?')) return; run('Fabrika ayarları', async () => { await client.defaults(); fill(await client.read()); status('Fabrika ayarlarına dönüldü.', 'ok'); }); });
+  $('btnDisconnect').addEventListener('click', async () => {
+    try { if (client) await client.quit(); } catch (e) {}
+    try { if (reader) await reader.cancel(); } catch (e) {}
+    try { await port.close(); } catch (e) {}
+    port = null; client = null; setEnabled(false); status('Bağlantı kesildi. Tracker normal çalışmaya döndü.', '');
+  });
+  setEnabled(false); update();
+})();
+</script>
+</body>
+</html>
